@@ -1,33 +1,65 @@
 'use client'
 
-import { useState, FormEvent } from 'react'
+import { FormEvent, useState } from 'react'
 import { createUserWithEmailAndPassword, updateProfile } from 'firebase/auth'
 import { auth } from '@/lib/firebase'
 import { useRouter } from 'next/navigation'
 
 export default function SignupPage() {
   const router = useRouter()
-  const [name, setName] = useState('')
-  const [email, setEmail] = useState('')
-  const [password, setPassword] = useState('')
-  const [error, setError] = useState('')
-  const [loading, setLoading] = useState(false)
 
-  async function handleSubmit(e: FormEvent) {
+  const [form, setForm] = useState({
+    name: '',
+    email: '',
+    password: '',
+    workspaceName: '',
+  })
+
+  const [loading, setLoading] = useState(false)
+  const [error, setError] = useState('')
+
+  async function onSubmit(e: FormEvent) {
     e.preventDefault()
-    setError('')
     setLoading(true)
+    setError('')
 
     try {
-      const userCred = await createUserWithEmailAndPassword(auth, email, password)
+      const cred = await createUserWithEmailAndPassword(
+        auth,
+        form.email,
+        form.password
+      )
 
-      if (name.trim()) {
-        await updateProfile(userCred.user, { displayName: name })
+      if (form.name.trim()) {
+        await updateProfile(cred.user, {
+          displayName: form.name,
+        })
       }
 
-      router.push('/dashboard')
+      const idToken = await cred.user.getIdToken()
+
+      const res = await fetch('/api/signup', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${idToken}`,
+        },
+        body: JSON.stringify({
+          name: form.name,
+          email: form.email,
+          workspaceName: form.workspaceName,
+        }),
+      })
+
+      const data = await res.json()
+
+      if (!res.ok) {
+        throw new Error(data.error || 'Signup failed')
+      }
+
+      router.push(`/dashboard/workspace/${data.workspaceId}`)
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Signup failed')
+      setError(err instanceof Error ? err.message : 'Something went wrong')
     } finally {
       setLoading(false)
     }
@@ -35,22 +67,23 @@ export default function SignupPage() {
 
   return (
     <main className="mx-auto max-w-md p-6">
-      <h1 className="mb-6 text-2xl font-semibold">Sign up</h1>
+      <h1 className="mb-6 text-2xl font-semibold">Create account</h1>
 
-      <form onSubmit={handleSubmit} className="space-y-4">
+      <form onSubmit={onSubmit} className="space-y-4">
         <input
           className="w-full rounded-lg border px-3 py-2"
-          placeholder="Name"
-          value={name}
-          onChange={(e) => setName(e.target.value)}
+          placeholder="Your name"
+          value={form.name}
+          onChange={(e) => setForm({ ...form, name: e.target.value })}
+          required
         />
 
         <input
           className="w-full rounded-lg border px-3 py-2"
           type="email"
           placeholder="Email"
-          value={email}
-          onChange={(e) => setEmail(e.target.value)}
+          value={form.email}
+          onChange={(e) => setForm({ ...form, email: e.target.value })}
           required
         />
 
@@ -58,8 +91,18 @@ export default function SignupPage() {
           className="w-full rounded-lg border px-3 py-2"
           type="password"
           placeholder="Password"
-          value={password}
-          onChange={(e) => setPassword(e.target.value)}
+          value={form.password}
+          onChange={(e) => setForm({ ...form, password: e.target.value })}
+          required
+        />
+
+        <input
+          className="w-full rounded-lg border px-3 py-2"
+          placeholder="Workspace name"
+          value={form.workspaceName}
+          onChange={(e) =>
+            setForm({ ...form, workspaceName: e.target.value })
+          }
           required
         />
 
