@@ -1,0 +1,15 @@
+const fs = require('fs');
+const path = require('path');
+const raw = fs.readFileSync(path.resolve('.env.local'), 'utf8');
+const line = raw.split(/\r?\n/).find((l) => l.startsWith('FIREBASE_PRIVATE_KEY='));
+const value = line.slice('FIREBASE_PRIVATE_KEY='.length);
+console.log('raw start', value.slice(0, 30));
+console.log('raw end', value.slice(-30));
+console.log('includes quotes', value.startsWith('"') && value.endsWith('"'));
+console.log('includes literal \\n', value.includes('\\n'));
+console.log('includes newline', value.includes('\n'));
+const parsed = value.replace(/^"|"$/g, '');
+console.log('parsed starts', parsed.slice(0, 30));
+console.log('parsed ends', parsed.slice(-30));
+console.log('parsed includes literal \\n', parsed.includes('\\n'));
+console.log('parsed includes newline', parsed.includes('\n'));

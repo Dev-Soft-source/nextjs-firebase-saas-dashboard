@@ -2,7 +2,10 @@ import { cert, getApp, getApps, initializeApp } from 'firebase-admin/app'
 import { getAuth } from 'firebase-admin/auth'
 import { getFirestore } from 'firebase-admin/firestore'
 
-const privateKey = process.env.FIREBASE_PRIVATE_KEY?.replace(/\\n/g, '\n')
+const rawPrivateKey = process.env.FIREBASE_PRIVATE_KEY
+const privateKey = rawPrivateKey
+  ? rawPrivateKey.replace(/\\n/g, '\n').replace(/^"|"$/g, '')
+  : undefined
 
 const adminApp =
   getApps().length > 0

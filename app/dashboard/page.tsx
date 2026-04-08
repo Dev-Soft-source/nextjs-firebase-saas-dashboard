@@ -30,7 +30,7 @@ export default function DashboardPage() {
       try {
         const idToken = await user.getIdToken()
 
-        const res = await fetch('/api/workspaces/me', {
+        const res = await fetch('/api/workspace/me', {
           headers: {
             Authorization: `Bearer ${idToken}`,
           },
