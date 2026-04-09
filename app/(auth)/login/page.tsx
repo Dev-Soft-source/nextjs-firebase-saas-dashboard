@@ -1,12 +1,15 @@
 'use client'
 
-import { FormEvent, useState } from 'react'
+import { FormEvent, Suspense, useState } from 'react'
 import { signInWithEmailAndPassword } from 'firebase/auth'
 import { auth } from '@/lib/firebase'
-import { useRouter } from 'next/navigation'
+import { useRouter, useSearchParams } from 'next/navigation'
+import Link from 'next/link'
 
-export default function LoginPage() {
+function LoginForm() {
   const router = useRouter()
+  const searchParams = useSearchParams()
+
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
   const [loading, setLoading] = useState(false)
@@ -21,7 +24,18 @@ export default function LoginPage() {
       const cred = await signInWithEmailAndPassword(auth, email, password)
       const idToken = await cred.user.getIdToken()
 
-      const res = await fetch('/api/workspace/me', {
+      const nextRaw = searchParams.get('next')
+      const nextPath =
+        nextRaw && nextRaw.startsWith('/') && !nextRaw.startsWith('//')
+          ? nextRaw
+          : null
+
+      if (nextPath) {
+        router.push(nextPath)
+        return
+      }
+
+      const res = await fetch('/api/workspaces/me', {
         method: 'GET',
         headers: {
           Authorization: `Bearer ${idToken}`,
@@ -34,12 +48,19 @@ export default function LoginPage() {
         throw new Error(data.error || 'Failed to load workspaces')
       }
 
-      if (!data.workspaces?.length) {
+      const workspaces = data.workspaces || []
+
+      if (workspaces.length === 1) {
+        router.push(`/dashboard/workspace/${workspaces[0].workspaceId}`)
+        return
+      }
+
+      if (workspaces.length > 1) {
         router.push('/dashboard')
         return
       }
 
-      router.push(`/dashboard/workspace/${data.workspaces[0].workspaceId}`)
+      router.push('/onboarding/create-workspace')
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Login failed')
     } finally {
@@ -80,6 +101,34 @@ export default function LoginPage() {
           {loading ? 'Signing in...' : 'Login'}
         </button>
       </form>
+
+      <p className="mt-6 text-center text-sm text-gray-600">
+        No account?{' '}
+        <Link
+          href={
+            searchParams.get('next')
+              ? `/signup?next=${encodeURIComponent(searchParams.get('next')!)}`
+              : '/signup'
+          }
+          className="font-medium text-gray-900 underline"
+        >
+          Sign up
+        </Link>
+      </p>
     </main>
+  )
+}
+
+export default function LoginPage() {
+  return (
+    <Suspense
+      fallback={
+        <main className="mx-auto max-w-md p-6">
+          <p className="text-sm text-gray-500">Loading...</p>
+        </main>
+      }
+    >
+      <LoginForm />
+    </Suspense>
   )
 }

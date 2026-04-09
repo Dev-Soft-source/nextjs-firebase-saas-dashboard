@@ -12,9 +12,9 @@ export default async function WorkspacePage({ params }: Props) {
   }
 
   return (
-    <main className="p-6">
+    <div>
       <h1 className="text-2xl font-semibold">Workspace Dashboard</h1>
       <p className="mt-2 text-sm text-gray-600">Workspace ID: {workspaceId}</p>
-    </main>
+    </div>
   )
 }

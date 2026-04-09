@@ -1,3 +1,4 @@
+
 import { NextRequest, NextResponse } from 'next/server'
 import { adminAuth, adminDb } from '@/lib/firebase-admin'
 
@@ -17,28 +18,31 @@ export async function GET(req: NextRequest) {
   try {
     const uid = await getUidFromRequest(req)
 
-    const membersSnap = await adminDb
-      .collectionGroup('members')
-      .where('userId', '==', uid)
-      .get()
+    const userSnap = await adminDb.collection('users').doc(uid).get()
+    const workspaceIds = (userSnap.data()?.workspaceIds as string[] | undefined) ?? []
 
     const workspaces = await Promise.all(
-      membersSnap.docs.map(async (memberDoc) => {
-        const workspaceRef = memberDoc.ref.parent.parent
-        if (!workspaceRef) return null
+      workspaceIds.map(async (workspaceId) => {
+        const workspaceRef = adminDb.collection('workspaces').doc(workspaceId)
+        const memberRef = workspaceRef.collection('members').doc(uid)
 
-        const workspaceSnap = await workspaceRef.get()
-        if (!workspaceSnap.exists) return null
+        const [workspaceSnap, memberSnap] = await Promise.all([
+          workspaceRef.get(),
+          memberRef.get(),
+        ])
 
-        const memberData = memberDoc.data()
+        if (!workspaceSnap.exists || !memberSnap.exists) return null
+
         const workspaceData = workspaceSnap.data()
+        const memberData = memberSnap.data()!
 
         return {
-          workspaceId: workspaceRef.id,
+          workspaceId,
           role: memberData.role,
           name: workspaceData?.name ?? '',
           slug: workspaceData?.slug ?? '',
           ownerId: workspaceData?.ownerId ?? '',
+          plan: workspaceData?.plan ?? '',
         }
       })
     )
@@ -47,9 +51,12 @@ export async function GET(req: NextRequest) {
       workspaces: workspaces.filter(Boolean),
     })
   } catch (error) {
+    console.error('GET /api/workspaces/me failed:', error)
+
     return NextResponse.json(
       {
-        error: error instanceof Error ? error.message : 'Internal server error',
+        error:
+          error instanceof Error ? error.message : 'Internal server error',
       },
       { status: 500 }
     )
