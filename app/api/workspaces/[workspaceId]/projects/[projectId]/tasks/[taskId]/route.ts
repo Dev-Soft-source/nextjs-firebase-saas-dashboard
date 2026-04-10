@@ -71,13 +71,39 @@ export async function PATCH(req: NextRequest, context: RouteContext) {
     }
 
     if (typeof body.assignedTo === 'string') {
-      updates.assignedTo = body.assignedTo.trim()
+      const assignedTo = body.assignedTo.trim()
+
+      if (!assignedTo) {
+        updates.assignedTo = ''
+        updates.assignedToName = ''
+        updates.assignedToEmail = ''
+      } else {
+        const assignedMemberSnap = await adminDb
+          .collection('workspaces')
+          .doc(workspaceId)
+          .collection('members')
+          .doc(assignedTo)
+          .get()
+
+        if (!assignedMemberSnap.exists) {
+          return NextResponse.json(
+            { error: 'Assigned member not found in workspace' },
+            { status: 400 }
+          )
+        }
+
+        const assignedMember = assignedMemberSnap.data()!
+
+        updates.assignedTo = assignedTo
+        updates.assignedToName = assignedMember.name ?? ''
+        updates.assignedToEmail = assignedMember.email ?? ''
+      }
     }
 
     if (body.dueDate !== undefined) {
       updates.dueDate = body.dueDate
     }
-    console.log('Updating task with:', updates);
+
     await adminDb
       .collection('workspaces')
       .doc(workspaceId)

@@ -93,22 +93,57 @@ export async function POST(req: NextRequest, context: RouteContext) {
             return NextResponse.json({ error: 'Invalid priority' }, { status: 400 })
         }
 
-        const taskRef = await adminDb.collection("workspaces").doc(workspaceId).collection("projects").doc(projectId).collection("tasks").add({
+        let assignedToName = ''
+        let assignedToEmail = ''
+
+        if (assignedTo) {
+        const assignedMemberSnap = await adminDb
+            .collection('workspaces')
+            .doc(workspaceId)
+            .collection('members')
+            .doc(assignedTo)
+            .get()
+
+        if (!assignedMemberSnap.exists) {
+            return NextResponse.json( { error: 'Assigned member not found in workspace' }, { status: 400 } )
+        }
+
+        const assignedMember = assignedMemberSnap.data()!
+        assignedToName = assignedMember.name ?? ''
+        assignedToEmail = assignedMember.email ?? ''
+        }
+
+        const ref = adminDb
+            .collection('workspaces')
+            .doc(workspaceId)
+            .collection('projects')
+            .doc(projectId)
+            .collection('tasks')
+            .doc()
+
+        await ref.set({
             title,
             description,
             status,
             priority,
             assignedTo,
+            assignedToName,
+            assignedToEmail,
             createdBy: uid,
-            dueDate,
-            createdAt: FieldValue.serverTimestamp(),
-            updatedAt: FieldValue.serverTimestamp(),
-        });
+            createdAt: new Date(),
+            updatedAt: new Date(),
+            })
 
-        return NextResponse.json({ success: true, taskId: taskRef.id });
-    } catch (err) {
-        console.error("Error creating task:", err);
-        return NextResponse.json({ error: "Internal Server Error" }, { status: 500 });
+        return NextResponse.json({
+        success: true,
+        taskId: ref.id,
+        })
+    } catch (error) {
+        console.error('POST task failed:', error)
+
+        return NextResponse.json(
+        { error: error instanceof Error ? error.message : 'Internal server error' },
+        { status: 500 }
+        )
     }
 }
-

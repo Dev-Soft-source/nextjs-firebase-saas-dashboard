@@ -18,10 +18,20 @@ type Task = {
   status: 'todo' | 'in_progress' | 'done'
   priority: 'low' | 'medium' | 'high'
   assignedTo: string
+  assignedToName?: string
+  assignedToEmail?: string
   dueDate: Date | null
   createdBy?: string
   createdAt?: Date | null
   updatedAt?: Date | null
+}
+
+type MemberOption = {
+  id: string
+  userId: string
+  name: string
+  email: string
+  role: string
 }
 
 export default function ProjectDetailsPage() {
@@ -41,6 +51,9 @@ export default function ProjectDetailsPage() {
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState('')
   const [busyId, setBusyId] = useState('')
+
+  const [members, setMembers] = useState<MemberOption[]>([])
+  const [assignedTo, setAssignedTo] = useState('')
   
   async function getToken() {
     const user = auth.currentUser
@@ -49,6 +62,24 @@ export default function ProjectDetailsPage() {
       throw new Error('Not authenticated')
     }
     return user.getIdToken()
+  }
+
+  async function loadMembers() {
+    const idToken = await getToken()
+
+    const res = await fetch(`/api/workspaces/${workspaceId}/members/options`, {
+      headers: {
+        Authorization: `Bearer ${idToken}`,
+      },
+    })
+
+    const data = await res.json()
+
+    if (!res.ok) {
+      throw new Error(data.error || 'Failed to load members')
+    }
+
+    setMembers(data.members || [])
   }
 
   async function loadProject() {
@@ -108,10 +139,13 @@ export default function ProjectDetailsPage() {
     try {
       setLoading(true)
       setError('')
-      await Promise.all([loadProject(), loadTasks()])
+      await Promise.all([loadProject(), loadTasks(), loadMembers()])
     }
     catch (err) {
       setError(err instanceof Error ? err.message : 'Something went wrong')
+    }
+    finally {
+      setLoading(false)
     }
   }
 
@@ -181,7 +215,8 @@ export default function ProjectDetailsPage() {
             title: taskTitle,
             description: taskDescription,
             priority: taskPriority,
-            assignedTo: '',
+            status: 'todo',
+            assignedTo,
             dueDate: null,
           }),
         }
@@ -191,6 +226,8 @@ export default function ProjectDetailsPage() {
       if (!res.ok) {
         throw new Error(data.error || 'Failed to create task')
       }
+
+      setAssignedTo('')
 
       setTaskTitle('')
       setTaskDescription('')
@@ -366,6 +403,19 @@ export default function ProjectDetailsPage() {
             <option value="low">Low priority</option>
             <option value="medium">Medium priority</option>
             <option value="high">High priority</option>
+          </select>
+
+          <select
+            className="w-full rounded-lg border px-3 py-2"
+            value={assignedTo}
+            onChange={(e) => setAssignedTo(e.target.value)}
+          >
+            <option value="">Unassigned</option>
+            {members.map((member) => (
+              <option key={member.userId} value={member.userId}>
+                {member.name || member.email} {member.role ? `(${member.role})` : ''}
+              </option>
+            ))}
           </select>
 
           <button
