@@ -26,8 +26,27 @@ export async function createProject(
   })
 }
 
-export async function listProjects(workspaceId: string) {
-  const ref = collection(db, 'workspaces', workspaceId, 'projects')
-  const snap = await getDocs(query(ref, orderBy('createdAt', 'desc')))
-  return snap.docs.map((doc) => ({ id: doc.id, ...doc.data() }))
-}
+// export async function createTask(
+//   workspaceId: string,
+//   projectId: string,
+//   title: string,
+//   description: string,
+//   priority: 'low' | 'medium' | 'high',
+//   assignedTo: string,
+//   userId: string,
+//   dueDate: Date | null
+// ) {
+//   const ref = collection(db, 'workspaces', workspaceId, 'projects', projectId, 'tasks')
+
+//   return addDoc(ref, {
+//     title,
+//     description,
+//     status: 'todo',
+//     priority,
+//     assignedTo,
+//     dueDate,
+//     createdBy: userId,
+//     createdAt: serverTimestamp(),
+//     updatedAt: serverTimestamp(),
+//   })
+// }
