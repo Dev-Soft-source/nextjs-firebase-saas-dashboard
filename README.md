@@ -29,6 +29,16 @@ To learn more about Next.js, take a look at the following resources:
 
 You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
 
+## LLM / AI Features
+
+This project includes AI-powered task tooling under `app/api/ai/*`.
+
+- `task-suggest` improves task titles and descriptions.
+- `task-assign` recommends the best team member for a task.
+- `task-breakdown` creates execution-ready subtasks.
+
+To use these features, set `OPENAI_API_KEY` in your environment and restart the dev server.
+
 ## Deploy on Vercel
 
 The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.

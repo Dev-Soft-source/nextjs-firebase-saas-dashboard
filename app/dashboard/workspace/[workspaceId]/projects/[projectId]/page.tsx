@@ -97,6 +97,7 @@ export default function ProjectDetailsPage() {
   const [breakingDown, setBreakingDown] = useState(false)
   const [assigningAI, setAssigningAI] = useState(false)
   const [aiAssignReason, setAiAssignReason] = useState('')
+  
 
   const selectedTask = useMemo(
     () => tasks.find((task) => task.id === selectedTaskId) || null,
@@ -472,8 +473,17 @@ export default function ProjectDetailsPage() {
         throw new Error(data.error || 'Failed to auto assign task')
       }
 
-      setAssignedTo(data.result.assignedTo || '')
-      setAiAssignReason(data.result.reason || '')
+      const suggestedUserId = data.result.assignedTo || ''
+      const reason = data.result.reason || ''
+
+      const matchedMember = members.find((m) => m.userId === suggestedUserId)
+
+      if (!matchedMember) {
+        throw new Error('AI returned a member that is not in this workspace')
+      }
+
+      setAssignedTo(matchedMember.userId)
+      setAiAssignReason(reason)
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Something went wrong')
     } finally {
@@ -633,6 +643,23 @@ export default function ProjectDetailsPage() {
           <div className="flex flex-wrap gap-2">
             <button
               type="button"
+              onClick={autoAssignWithAI}
+              disabled={assigningAI || members.length === 0 || !taskTitle.trim()}
+              className="rounded-lg border px-4 py-2 text-sm disabled:opacity-50"
+            >
+              {assigningAI ? 'Assigning...' : 'AI Assign'}
+            </button>
+          </div>
+
+          {aiAssignReason && (
+            <div className="rounded-lg border bg-gray-50 p-3 text-sm text-gray-700">
+              <span className="font-medium">AI reason:</span> {aiAssignReason}
+            </div>
+          )}
+
+          <div className="flex flex-wrap gap-2">
+            <button
+              type="button"
               onClick={suggestTaskWithAI}
               disabled={suggesting}
               className="rounded-lg border px-4 py-2 text-sm"
@@ -657,13 +684,7 @@ export default function ProjectDetailsPage() {
             >
               {breakingDown ? 'Breaking down...' : 'AI Breakdown'}
             </button>
-          </div>
-
-          {aiAssignReason && (
-            <p className="text-sm text-gray-600">
-              AI reason: {aiAssignReason}
-            </p>
-          )}
+          </div>         
 
           <button
             type="submit"
