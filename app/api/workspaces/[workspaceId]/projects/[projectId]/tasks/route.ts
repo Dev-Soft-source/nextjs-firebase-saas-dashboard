@@ -50,6 +50,8 @@ export async function GET(req: NextRequest, context: RouteContext) {
                 status: String(data.status || "active"),
                 priority: String(data.priority || "medium"),
                 assignedTo: String(data.assignedTo || ""),
+                assignedToName: String(data.assignedToName || ""),
+                assignedToEmail: String(data.assignedToEmail || ""),
                 createdBy: String(data.createdBy || ""),
                 dueDate: data.dueDate ? data.dueDate.toDate() : null,
                 createdAt: data.createdAt ? data.createdAt.toDate() : null,
@@ -113,13 +115,7 @@ export async function POST(req: NextRequest, context: RouteContext) {
         assignedToEmail = assignedMember.email ?? ''
         }
 
-        const ref = adminDb
-            .collection('workspaces')
-            .doc(workspaceId)
-            .collection('projects')
-            .doc(projectId)
-            .collection('tasks')
-            .doc()
+        const ref = adminDb.collection('workspaces').doc(workspaceId).collection('projects').doc(projectId).collection('tasks').doc()
 
         await ref.set({
             title,
@@ -130,8 +126,8 @@ export async function POST(req: NextRequest, context: RouteContext) {
             assignedToName,
             assignedToEmail,
             createdBy: uid,
-            createdAt: new Date(),
-            updatedAt: new Date(),
+            createdAt: FieldValue.serverTimestamp(),
+            updatedAt: FieldValue.serverTimestamp(),
             })
 
         return NextResponse.json({
